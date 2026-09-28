@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Smallest space analysis, step by step</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F3F5F7; --card:#FFFFFF; --ink:#16202B; --muted:#56626F; --rule:#D3DAE1; --soft:#E7ECF0;
+  --core:#7B8794; --plan:#0E7C66; --opp:#6A4FC7; --exp:#C4501F; --link:#E09B00; --focus:#2F5DA8;
+  --serif:"Newsreader", Georgia, "Times New Roman", serif;
+  --sans:"Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#11161C; --card:#1A2129; --ink:#E6EBF0; --muted:#9AA6B2; --rule:#2E3844; --soft:#232B35;
+    --core:#8C98A5; --plan:#3BB896; --opp:#9D86F0; --exp:#EE7E4A; --link:#F2B533; --focus:#7FA6E8;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#11161C; --card:#1A2129; --ink:#E6EBF0; --muted:#9AA6B2; --rule:#2E3844; --soft:#232B35;
+  --core:#8C98A5; --plan:#3BB896; --opp:#9D86F0; --exp:#EE7E4A; --link:#F2B533; --focus:#7FA6E8;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.65}
+main{max-width:980px;margin:0 auto;padding:48px 24px 80px}
+.prose{max-width:680px}
+h1{font-family:var(--serif);font-weight:400;font-size:clamp(34px,6vw,54px);line-height:1.08;margin:0 0 18px;letter-spacing:-0.01em}
+h2{font-family:var(--serif);font-weight:500;font-size:28px;line-height:1.2;margin:0 0 12px}
+.step{display:grid;grid-template-columns:56px minmax(0,1fr);gap:0 16px;margin-top:64px}
+.num{font-family:var(--serif);font-size:44px;line-height:1;color:var(--muted);padding-top:2px}
+.lede{font-size:20px;color:var(--muted);max-width:640px}
+p{margin:0 0 14px}
+.panel{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:20px;margin:18px 0 8px}
+.controls{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;font-size:15px;color:var(--muted);margin-bottom:14px}
+label{display:inline-flex;gap:8px;align-items:center;cursor:pointer}
+button,select{font:inherit;font-size:15px;color:var(--ink);background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:7px 12px;cursor:pointer}
+button:hover,select:hover{border-color:var(--muted)}
+button.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+input[type=range]{accent-color:var(--ink);width:180px}
+input[type=checkbox]{accent-color:var(--ink);width:16px;height:16px}
+.scroll{overflow-x:auto}
+.matrix{display:grid;font-size:13px;gap:3px;min-width:640px}
+.matrix .rl{white-space:nowrap;padding-right:10px;display:flex;align-items:center;gap:8px}
+.matrix .cell{height:22px;border-radius:4px;background:var(--soft);display:flex;align-items:center;justify-content:center}
+.matrix .cell.on::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--ink)}
+.matrix .ch{font-size:11px;color:var(--muted);text-align:center;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center}
+.sw{width:9px;height:9px;border-radius:50%;flex:none}
+.venn{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}
+.stat{background:var(--soft);border-radius:10px;padding:12px 14px}
+.stat b{display:block;font-family:var(--serif);font-weight:500;font-size:30px;line-height:1.1}
+.stat span{font-size:13px;color:var(--muted)}
+.formula{font-family:var(--serif);font-size:20px}
+.bar{height:10px;border-radius:5px;background:var(--soft);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--link)}
+svg text{font-family:var(--sans)}
+.readout{font-size:15px;color:var(--muted);min-height:50px;margin-top:10px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;color:var(--muted);margin-top:10px}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.crimes{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;margin-bottom:14px}
+.crime{border:1px solid var(--rule);border-radius:10px;padding:10px 12px;font-size:14px;display:flex;gap:10px;align-items:flex-start}
+.crime.ref{border-color:var(--ink)}
+.crime .tags{color:var(--muted);font-size:13px;line-height:1.45}
+.crime .sim{margin-left:auto;font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted);white-space:nowrap}
+.mapwrap{position:relative;width:100%;aspect-ratio:3/2;border-radius:10px;overflow:hidden;border:1px solid var(--rule)}
+canvas{width:100%;height:100%;display:block}
+.score{font-family:var(--serif);font-size:22px}
+ul.plain{padding-left:20px;margin:0 0 14px} ul.plain li{margin-bottom:8px}
+footer{margin-top:72px;font-size:14px;color:var(--muted);border-top:1px solid var(--rule);padding-top:18px}
+@media (max-width:640px){.step{grid-template-columns:1fr}.num{font-size:32px;margin-bottom:6px}main{padding:32px 16px 60px}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Smallest space analysis, step by step</h1>
+  <p class="lede">A hands-on walk through how investigative psychologists turn a pile of crime reports into a map of offending styles, and how that map feeds into geographical profiling.</p>
+  <p class="prose">Everything below runs on simulated burglary data, generated fresh in your browser. The map in step 3 is computed from the data, not drawn by hand, so changing the sample changes the result. Use the controls here to change how many cases are in the sample.</p>
+
+  <div class="panel controls" style="margin-top:22px">
+    <label for="nCases">Cases in sample <input type="range" id="nCases" min="20" max="400" step="10" value="120"> <b id="nOut" style="color:var(--ink);min-width:32px">120</b></label>
+    <button id="reseed">Draw a new sample</button>
+  </div>
+
+  <section class="step">
+    <div class="num">1</div>
+    <div>
+      <h2>The case file</h2>
+      <div class="prose">
+        <p>Analysts read police reports and code each offence for whether a behaviour was present or absent. Each column below is one burglary, and each row is one behaviour. A dot means the behaviour happened. Only the first 20 cases are shown.</p>
+        <p>In real life, nobody knows which "style" each burglar has. That's the thing SSA is trying to uncover. Tick the box to reveal the hidden style used to simulate each case.</p>
+      </div>
+      <div class="panel">
+        <div class="controls"><label><input type="checkbox" id="reveal"> Reveal each case's hidden style</label></div>
+        <div class="scroll"><div class="matrix" id="matrix"></div></div>
+        <div class="legend" id="legend1"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="num">2</div>
+    <div>
+      <h2>Counting what goes together</h2>
+      <div class="prose">
+        <p>Next, every pair of behaviours gets an association score. The usual choice is Jaccard's coefficient. It counts how many cases have both behaviours, then divides by how many cases have at least one of them. Cases with neither are ignored, because the absence of a behaviour in a police report is often just missing information.</p>
+      </div>
+      <div class="panel">
+        <div class="controls">
+          <label>Behaviour A <select id="selA"></select></label>
+          <label>Behaviour B <select id="selB"></select></label>
+        </div>
+        <div class="venn" id="venn"></div>
+        <p class="formula" id="formula"></p>
+        <div class="bar"><i id="jbar" style="width:0"></i></div>
+        <p style="font-size:15px;color:var(--muted);margin-top:12px" id="jnote"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="num">3</div>
+    <div>
+      <h2>The map</h2>
+      <div class="prose">
+        <p>With 12 behaviours there are 66 pairs, which is far too many numbers to read. SSA places the behaviours as points on a plane so that pairs with high association scores end up close together. This page uses classical multidimensional scaling, a close relative of Guttman's SSA, to find those positions. Points that land almost on top of each other are nudged apart slightly so the labels stay readable.</p>
+        <p>Click a point to see its links. Then turn on the themes and regions and compare them with the layout.</p>
+      </div>
+      <div class="panel">
+        <div class="controls">
+          <label><input type="checkbox" id="tColour"> Colour by theme</label>
+          <label><input type="checkbox" id="tRegion"> Draw regions</label>
+          <label><input type="checkbox" id="tFreq" checked> Size by frequency</label>
+          <button id="clearSel">Clear selection</button>
+        </div>
+        <svg id="map" viewBox="0 0 680 520" width="100%" role="img" aria-label="Computed map of burglary behaviours"></svg>
+        <div class="readout" id="readout"></div>
+        <div class="legend" id="legend3"></div>
+        <p style="font-size:15px;margin-top:14px"><span class="score" id="fit"></span> <span style="color:var(--muted)" id="fitNote"></span></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="num">4</div>
+    <div class="prose">
+      <h2>Reading the map</h2>
+      <p>Researchers look for two patterns.</p>
+      <ul class="plain">
+        <li><b>Centre versus edge.</b> Behaviours almost every offender shows, like searching rooms, co-occur with everything, so they get pulled into the middle. Rare, distinctive behaviours are pushed out to the edges. The edges are where you learn something about a particular offender.</li>
+        <li><b>Regions.</b> Behaviours that share an underlying style cluster in the same area of the map. The software doesn't label those areas. An analyst looks at the plot and decides where to draw the lines, which is why critics call this step subjective.</li>
+      </ul>
+      <p>Try moving the sample slider down to 20 cases. The map gets noisy and the themes blur, because small samples give unstable association scores. Real studies usually use at least a hundred offences for this reason.</p>
+      <p>The orientation of the map doesn't matter. Only the distances do, so a new sample may come out rotated or mirrored.</p>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="num">5</div>
+    <div>
+      <h2>From behaviour to geography</h2>
+      <div class="prose">
+        <p>A geographical profile takes the locations of a crime series and estimates where the offender probably lives. It works on the idea that offenders commit most crimes fairly near home, but not right on their doorstep. The catch is that you have to feed it the right crimes. If burglaries by a different person get mixed in, the estimate drifts.</p>
+        <p>Below are nine burglaries. Case A1 is the one being investigated. Each card shows its behaviours and its Jaccard similarity to A1. Include or exclude cases and watch the profile change. Then use the button to link cases by behaviour.</p>
+      </div>
+      <div class="panel">
+        <div class="crimes" id="crimes"></div>
+        <div class="controls">
+          <button class="primary" id="linkBtn">Link by behaviour (similarity ≥ 0.4)</button>
+          <button id="allBtn">Include all</button>
+          <label><input type="checkbox" id="showHome"> Reveal A1's real home</label>
+        </div>
+        <div class="mapwrap"><canvas id="geo" width="900" height="600" aria-label="Geographic profile heat map"></canvas></div>
+        <p style="margin-top:14px"><span class="score" id="hit"></span> <span style="color:var(--muted);font-size:15px" id="hitNote"></span></p>
+        <div class="legend"><span><i class="sw" style="background:var(--ink)"></i>Included crime</span><span><i class="sw" style="background:var(--muted);opacity:.45"></i>Excluded crime</span><span><i class="sw" style="background:#E0402A"></i>Most likely home area</span><span><i class="sw" style="background:var(--link)"></i>Real home (when revealed)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="num">6</div>
+    <div class="prose">
+      <h2>The limits</h2>
+      <p>Real data is messier than this simulation. Police files are written for prosecution, not research, so behaviours are often missing or inconsistently recorded. Real offenders also mix styles more than simulated ones, and the regions in published studies are rarely as clean as the ones here.</p>
+      <p>SSA describes patterns across many offences. It doesn't tell you with certainty which style a single offender has. Evidence that behavioural style predicts how far offenders travel or where they live is mixed. In practice, SSA is best treated as a way of exploring data and generating hypotheses. The geographic part, estimating a likely home area, is done with separate spatial methods such as Rossmo's criminal geographic targeting.</p>
+    </div>
+  </section>
+
+  <footer>All data on this page is simulated for teaching. The geographic model is a simplified version of a distance-decay function with a buffer zone, and the hit score is the percentage of the map searched before reaching the true home, where lower is better.</footer>
+</main>
+
+<script>
+const B=[
+ {n:"Rear entry",t:"core"},{n:"Rooms searched",t:"core"},{n:"Cash stolen",t:"core"},
+ {n:"Tools brought",t:"plan"},{n:"Alarm disabled",t:"plan"},{n:"Targeted jewellery",t:"plan"},
+ {n:"Unlocked door",t:"opp"},{n:"Items dropped",t:"opp"},{n:"Quick exit",t:"opp"},
+ {n:"Vandalism",t:"exp"},{n:"Graffiti",t:"exp"},{n:"Personal items taken",t:"exp"}];
+const TN={core:"Common core",plan:"Planned",opp:"Opportunistic",exp:"Expressive"};
+const P={core:[.85,.8,.72],own:{plan:[.7,.45,.6],opp:[.75,.4,.6],exp:[.6,.35,.55]},other:.06};
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const col=t=>css('--'+t);
+let seed=7, cases=[], J=[], freq=[], pos=[], sel=null;
+
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gen(n){
+  const r=rng(seed);const out=[];
+  for(let i=0;i<n;i++){
+    const u=r();const s=u<.3?"plan":u<.75?"opp":"exp";const b=new Set();
+    B.forEach((x,k)=>{let p;if(x.t==="core")p=P.core[k];else if(x.t===s)p=P.own[s][(k)%3];else p=P.other;if(r()<p)b.add(k)});
+    out.push({s,b});
+  }return out;
+}
+function jac(a,b){let both=0,one=0;cases.forEach(c=>{const x=c.b.has(a),y=c.b.has(b);if(x&&y)both++;else if(x||y)one++});return both+one?both/(both+one):0}
+
+function mds(D){
+  const n=D.length,D2=D.map(r=>r.map(v=>v*v));
+  const rm=D2.map(r=>r.reduce((a,b)=>a+b,0)/n),gm=rm.reduce((a,b)=>a+b,0)/n;
+  let M=D2.map((r,i)=>r.map((v,j)=>-.5*(v-rm[i]-rm[j]+gm)));
+  const vecs=[];
+  for(let k=0;k<2;k++){
+    let v=Array.from({length:n},(_,i)=>Math.sin(i*1.7+k+1));
+    let lam=0;
+    for(let it=0;it<300;it++){
+      const w=M.map(r=>r.reduce((s,x,j)=>s+x*v[j],0));
+      const norm=Math.hypot(...w)||1;v=w.map(x=>x/norm);
+    }
+    lam=v.reduce((s,x,i)=>s+x*M[i].reduce((t,y,j)=>t+y*v[j],0),0);
+    vecs.push(v.map(x=>x*Math.sqrt(Math.max(lam,1e-6))));
+    M=M.map((r,i)=>r.map((x,j)=>x-lam*v[i]*v[j]));
+  }
+  return vecs[0].map((x,i)=>[x,vecs[1][i]]);
+}
+function ranks(a){const idx=a.map((v,i)=>[v,i]).sort((x,y)=>x[0]-y[0]);const r=new Array(a.length);let i=0;while(i<idx.length){let j=i;while(j+1<idx.length&&idx[j+1][0]===idx[i][0])j++;for(let k=i;k<=j;k++)r[idx[k][1]]=(i+j)/2;i=j+1}return r}
+function spearman(a,b){const ra=ranks(a),rb=ranks(b),n=a.length,ma=ra.reduce((s,x)=>s+x,0)/n,mb=rb.reduce((s,x)=>s+x,0)/n;let num=0,da=0,db=0;for(let i=0;i<n;i++){num+=(ra[i]-ma)*(rb[i]-mb);da+=(ra[i]-ma)**2;db+=(rb[i]-mb)**2}return num/Math.sqrt(da*db||1)}
+
+function compute(){
+  const n=+document.getElementById('nCases').value;
+  cases=gen(n);
+  J=B.map((_,a)=>B.map((_,b)=>a===b?1:jac(a,b)));
+  freq=B.map((_,k)=>cases.filter(c=>c.b.has(k)).length/n);
+  const raw=mds(J.map(r=>r.map(v=>1-v)));
+  const xs=raw.map(p=>p[0]),ys=raw.map(p=>p[1]);
+  const cx=(Math.max(...xs)+Math.min(...xs))/2,cy=(Math.max(...ys)+Math.min(...ys))/2;
+  const span=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys))||1;
+  pos=raw.map(p=>[340+(p[0]-cx)/span*420,260+(p[1]-cy)/span*400]);
+  spread();
+  renderMatrix();renderPair();renderMap();
+}
+
+let ldy=[];
+function spread(){
+  const minD=78;
+  for(let it=0;it<200;it++){
+    let moved=false;
+    for(let a=0;a<pos.length;a++)for(let b=a+1;b<pos.length;b++){
+      let dx=pos[b][0]-pos[a][0],dy=pos[b][1]-pos[a][1],d=Math.hypot(dx,dy);
+      if(d<minD){if(d<.01){dx=Math.cos(a+b);dy=Math.sin(a+b);d=1}
+        const push=(minD-d)/2*0.5;pos[a][0]-=dx/d*push;pos[a][1]-=dy/d*push;pos[b][0]+=dx/d*push;pos[b][1]+=dy/d*push;moved=true}
+    }
+    pos.forEach(p=>{p[0]=Math.min(Math.max(p[0],170),510);p[1]=Math.min(Math.max(p[1],40),480)});
+    if(!moved)break;
+  }
+  ldy=pos.map(()=>0);
+  const box=i=>{const left=pos[i][0]<340,w=B[i].n.length*7.4+10,x=left?pos[i][0]-w-12:pos[i][0]+12;return{x,w,y:pos[i][1]+ldy[i]-9,h:18}};
+  for(let it=0;it<60;it++){let moved=false;
+    for(let a=0;a<pos.length;a++)for(let b=a+1;b<pos.length;b++){
+      const A=box(a),Bx=box(b);
+      if(A.x<Bx.x+Bx.w&&Bx.x<A.x+A.w&&A.y<Bx.y+Bx.h&&Bx.y<A.y+A.h){const up=A.y<=Bx.y;ldy[a]+=up?-3:3;ldy[b]+=up?3:-3;moved=true}
+    }if(!moved)break}
+}
+function renderMatrix(){
+  const reveal=document.getElementById('reveal').checked;
+  const shown=cases.slice(0,20),m=document.getElementById('matrix');
+  m.style.gridTemplateColumns=`170px repeat(${shown.length},minmax(18px,1fr))`;
+  let h='<div></div>'+shown.map((c,i)=>`<div class="ch" style="${reveal?`background:${col(c.s)};color:#fff`:''}">${i+1}</div>`).join('');
+  B.forEach((b,k)=>{h+=`<div class="rl">${b.n}</div>`+shown.map(c=>`<div class="cell${c.b.has(k)?' on':''}"></div>`).join('')});
+  m.innerHTML=h;
+  document.getElementById('legend1').innerHTML=reveal?["plan","opp","exp"].map(t=>`<span><i class="sw" style="background:${col(t)}"></i>${TN[t]} burglar</span>`).join(''):'<span>Column numbers are case IDs.</span>';
+}
+
+function fillSelects(){
+  const o=B.map((b,i)=>`<option value="${i}">${b.n}</option>`).join('');
+  selA.innerHTML=o;selB.innerHTML=o;selA.value=3;selB.value=4;
+}
+function renderPair(){
+  const a=+selA.value,b=+selB.value;let both=0,ao=0,bo=0,nei=0;
+  cases.forEach(c=>{const x=c.b.has(a),y=c.b.has(b);if(x&&y)both++;else if(x)ao++;else if(y)bo++;else nei++});
+  const j=a===b?1:both/((both+ao+bo)||1);
+  venn.innerHTML=`<div class="stat"><b>${both}</b><span>cases with both</span></div><div class="stat"><b>${ao}</b><span>${B[a].n} only</span></div><div class="stat"><b>${bo}</b><span>${B[b].n} only</span></div><div class="stat" style="opacity:.6"><b>${nei}</b><span>neither (ignored)</span></div>`;
+  formula.innerHTML=a===b?'Pick two different behaviours.':`Jaccard = ${both} ÷ (${both} + ${ao} + ${bo}) = <b>${j.toFixed(2)}</b>`;
+  jbar.style.width=(j*100).toFixed(0)+'%';
+  jnote.textContent=a===b?'':j>.45?'High score: these two behaviours tend to appear in the same burglaries, so SSA will place them close together.':j>.2?'Moderate score: they overlap sometimes.':'Low score: they rarely appear together, so SSA will push them apart.';
+}
+
+function hull(pts){pts=pts.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);const lo=[],up=[];for(const p of pts){while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p)}for(const p of pts.reverse()){while(up.length>=2&&cr(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p)}return lo.slice(0,-1).concat(up.slice(0,-1))}
+function renderMap(){
+  const tc=tColour.checked,tr=tRegion.checked,tf=tFreq.checked;let s='';
+  if(tr){
+    ["plan","opp","exp"].forEach(t=>{const p=B.map((b,i)=>b.t===t?pos[i]:null).filter(Boolean);const h=hull(p);const c=[p.reduce((s,x)=>s+x[0],0)/p.length,p.reduce((s,x)=>s+x[1],0)/p.length];const g=h.map(q=>[c[0]+(q[0]-c[0])*1.35,c[1]+(q[1]-c[1])*1.35]);
+      s+=`<polygon points="${g.map(q=>q.join(',')).join(' ')}" fill="${col(t)}" fill-opacity=".1" stroke="${col(t)}" stroke-opacity=".5" stroke-width="1" stroke-dasharray="5 4" stroke-linejoin="round"/>`});
+    const cp=B.map((b,i)=>b.t==='core'?pos[i]:null).filter(Boolean);const cc=[cp.reduce((s,x)=>s+x[0],0)/3,cp.reduce((s,x)=>s+x[1],0)/3];const rr=Math.max(...cp.map(q=>Math.hypot(q[0]-cc[0],q[1]-cc[1])))+26;
+    s+=`<circle cx="${cc[0]}" cy="${cc[1]}" r="${rr}" fill="none" stroke="${col('core')}" stroke-width="1" stroke-dasharray="5 4"/>`;
+  }
+  if(sel!==null){B.forEach((_,i)=>{if(i===sel)return;const w=J[sel][i];if(w<.08)return;s+=`<line x1="${pos[sel][0]}" y1="${pos[sel][1]}" x2="${pos[i][0]}" y2="${pos[i][1]}" stroke="${col('link')}" stroke-width="${(0.5+w*6).toFixed(1)}" stroke-opacity="${(0.2+w*0.8).toFixed(2)}" stroke-linecap="round"/>`})}
+  B.forEach((b,i)=>{
+    const r=tf?4+freq[i]*16:7,[x,y]=pos[i],left=x<340;
+    const dim=sel!==null&&i!==sel&&J[sel][i]<.2;
+    s+=`<g style="cursor:pointer;opacity:${dim?.3:1}" onclick="sel=${i};renderMap()" tabindex="0" onkeydown="if(event.key==='Enter'){sel=${i};renderMap()}"><circle cx="${x}" cy="${y}" r="${r.toFixed(1)}" fill="${tc?col(b.t):col('core')}" stroke="${i===sel?col('ink'):'none'}" stroke-width="2.5"/><text x="${left?x-r-7:x+r+7}" y="${y+4.5+ldy[i]}" text-anchor="${left?'end':'start'}" font-size="13" font-weight="${i===sel?600:400}" fill="${col('ink')}">${b.n}</text></g>`;
+  });
+  map.innerHTML=s;
+  legend3.innerHTML=tc||tr?["core","plan","opp","exp"].map(t=>`<span><i class="sw" style="background:${col(t)}"></i>${TN[t]}</span>`).join(''):'';
+  if(sel===null){readout.textContent='Click any point to see which behaviours it co-occurs with. Thicker lines mean higher Jaccard scores.'}
+  else{const top=B.map((b,i)=>({n:b.n,w:J[sel][i],i})).filter(o=>o.i!==sel).sort((a,b)=>b.w-a.w).slice(0,3);
+    readout.innerHTML=`<b style="color:var(--ink)">${B[sel].n}</b> appears in ${Math.round(freq[sel]*100)}% of cases. Its strongest links are ${top.map(o=>`${o.n.toLowerCase()} (${o.w.toFixed(2)})`).join(', ')}. `+(B[sel].t==='core'?'It sits near the middle because most burglars do it, so on its own it says little about who did this one.':'It sits towards the edge because it is less common and more distinctive.')}
+  const js=[],ds=[];for(let a=0;a<12;a++)for(let b=a+1;b<12;b++){js.push(J[a][b]);ds.push(-Math.hypot(pos[a][0]-pos[b][0],pos[a][1]-pos[b][1]))}
+  const f=spearman(js,ds);
+  fit.textContent=`Fit: ${f.toFixed(2)}`;
+  fitNote.textContent=`This is the rank agreement between the association scores and the distances on the map, where 1 would be a perfect match. Published SSA studies report a similar check called the coefficient of alienation, where lower is better and below about 0.2 is considered a good fit.`;
+}
+
+// Geography
+const HOME=[300,300];
+const CR=[
+ {id:"A1",x:220,y:200,b:[3,4,5,0,1]},{id:"A2",x:420,y:215,b:[3,5,0,1]},{id:"A3",x:390,y:410,b:[3,4,0,1,2]},
+ {id:"A4",x:200,y:400,b:[3,5,1,2]},{id:"A5",x:450,y:320,b:[4,5,0,1]},{id:"A6",x:280,y:150,b:[3,4,1]},
+ {id:"B1",x:720,y:120,b:[6,7,8,2]},{id:"B2",x:790,y:200,b:[6,8,1,2]},{id:"B3",x:760,y:80,b:[6,7,1]}];
+CR.forEach(c=>{c.in=true});
+const sim=(a,b)=>{const A=new Set(a),Bs=new Set(b);let i=0;A.forEach(x=>{if(Bs.has(x))i++});return i/(A.size+Bs.size-i)};
+function renderCrimes(){
+  crimes.innerHTML=CR.map((c,k)=>{const s=sim(CR[0].b,c.b);return `<label class="crime${k===0?' ref':''}"><input type="checkbox" ${c.in?'checked':''} ${k===0?'disabled':''} onchange="CR[${k}].in=this.checked;renderGeo()"><div><b>${c.id}</b>${k===0?' (under investigation)':''}<div class="tags">${c.b.map(i=>B[i].n).join(', ')}</div></div><span class="sim">${k===0?'':'sim '+s.toFixed(2)}</span></label>`}).join('');
+}
+function score(x,y,list){const Bz=60,f=1.2,g=1.2;let s=0;list.forEach(c=>{const d=Math.abs(x-c.x)+Math.abs(y-c.y)+1;s+=d>Bz?1/Math.pow(d,f):Math.pow(Bz,g-f)/Math.pow(2*Bz-d,g)});return s}
+function renderGeo(){
+  const cv=geo,ctx=cv.getContext('2d'),W=cv.width,H=cv.height;const list=CR.filter(c=>c.in);
+  ctx.fillStyle=col('card');ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle=col('rule');ctx.lineWidth=6;
+  [[0,110,W,130],[0,260,W,250],[0,470,W,500],[150,0,170,H],[350,0,330,H],[600,0,620,H],[780,0,760,H]].forEach(l=>{ctx.beginPath();ctx.moveTo(l[0],l[1]);ctx.lineTo(l[2],l[3]);ctx.stroke()});
+  const cell=12,vals=[];let mx=0;
+  for(let y=0;y<H;y+=cell)for(let x=0;x<W;x+=cell){const v=score(x+cell/2,y+cell/2,list);vals.push([x,y,v]);if(v>mx)mx=v}
+  const sorted=vals.map(v=>v[2]).sort((a,b)=>b-a);const cut=sorted[Math.floor(sorted.length*.35)];
+  vals.forEach(([x,y,v])=>{if(v<cut)return;const t=(v-cut)/(mx-cut);ctx.fillStyle=`rgba(${Math.round(240-20*t)},${Math.round(190-150*t)},${Math.round(60-20*t)},${(0.12+t*0.62).toFixed(2)})`;ctx.fillRect(x,y,cell,cell)});
+  CR.forEach(c=>{ctx.globalAlpha=c.in?1:.3;ctx.fillStyle=col('ink');ctx.beginPath();ctx.arc(c.x,c.y,9,0,7);ctx.fill();ctx.font='600 20px '+css('--sans');ctx.fillText(c.id,c.x+13,c.y-10)});ctx.globalAlpha=1;
+  const hs=score(HOME[0],HOME[1],list);const pct=vals.filter(v=>v[2]>hs).length/vals.length*100;
+  if(showHome.checked){ctx.fillStyle=col('link');ctx.strokeStyle=col('ink');ctx.lineWidth=2;ctx.beginPath();for(let i=0;i<10;i++){const r=i%2?7:17,a=Math.PI/5*i-Math.PI/2;ctx.lineTo(HOME[0]+r*Math.cos(a),HOME[1]+r*Math.sin(a))}ctx.closePath();ctx.fill();ctx.stroke()}
+  hit.textContent=showHome.checked?`Hit score: ${pct.toFixed(1)}%`:'Hit score: hidden';
+  hitNote.textContent=showHome.checked?`Searching outwards from the hottest area, police would cover ${pct.toFixed(1)}% of the map before reaching the real home. Lower is better. Compare this number with and without the B cases.`:'Reveal the real home to see how well the profile did.';
+}
+
+nCases.oninput=()=>{nOut.textContent=nCases.value;sel=null;compute()};
+reseed.onclick=()=>{seed=Math.floor(Math.random()*1e6);sel=null;compute()};
+reveal.onchange=renderMatrix;selA.onchange=renderPair;selB.onchange=renderPair;
+[tColour,tRegion,tFreq].forEach(e=>e.onchange=renderMap);clearSel.onclick=()=>{sel=null;renderMap()};
+linkBtn.onclick=()=>{CR.forEach((c,k)=>{c.in=k===0||sim(CR[0].b,c.b)>=.4});renderCrimes();renderGeo()};
+allBtn.onclick=()=>{CR.forEach(c=>c.in=true);renderCrimes();renderGeo()};
+showHome.onchange=renderGeo;
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{renderMatrix();renderMap();renderGeo()});
+fillSelects();compute();renderCrimes();renderGeo();
+</script>
+</body>
+</html>
